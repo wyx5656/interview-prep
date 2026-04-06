@@ -31,7 +31,9 @@
 
 ### 数据结构
 - [x] 八大排序算法（冒泡/选择/插入/希尔/快速/归并/堆/基数）- [data-structures/sort.c](data-structures/sort.c)
-- [ ] 顺序表和链表
+- [x] 顺序表 - [data-structures/seqlist.h](data-structures/seqlist.h) (动态分配实现，支持插入/删除/查找)
+- [ ] 单链表
+- [ ] 双向链表
 - [ ] 栈和队列
 - [ ] 树和二叉树
 - [ ] 二叉搜索树/平衡树
