@@ -1,0 +1,4 @@
+0000000000000000000000000000000000000000 33cce8e01f039b45e563536d8cfe259f81aae0c4 15194785942@163.com <15194785942@163.com> 1775551450 +0800	commit (initial): Refactor: Fix bugs, optimize performance, add double LRU cache
+33cce8e01f039b45e563536d8cfe259f81aae0c4 7d14d25bcd3cd1004709105731e6171b089001ab 15194785942@163.com <15194785942@163.com> 1775551984 +0800	commit (amend): Refactor: Fix bugs, optimize performance, add double LRU cache
+7d14d25bcd3cd1004709105731e6171b089001ab 5c53dd2763704dc17eff13db112f5fb0d89d4c1a 15194785942@163.com <15194785942@163.com> 1775552609 +0800	commit (amend): Refactor: Fix bugs, optimize performance, add double LRU cache
+5c53dd2763704dc17eff13db112f5fb0d89d4c1a 8e92c677f9ba2c6b718ee63ec8afe88f588ad70a 15194785942@163.com <15194785942@163.com> 1775564914 +0800	commit: Fix all bugs: DoubleLruCache synchronization and inverted index loading issues, add complete unit tests, add test reports, add full technical summary document

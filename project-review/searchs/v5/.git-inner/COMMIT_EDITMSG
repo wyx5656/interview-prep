@@ -1,0 +1,16 @@
+Fix all bugs: DoubleLruCache synchronization and inverted index loading issues, add complete unit tests, add test reports, add full technical summary document
+
+Summary of fixes:
+1. Fix DoubleLruCache synchronization timing issue - sync when there's new data even if interval not reached
+2. Fix DoubleLruCache synchronization logic bug - old data was being cleared incorrectly
+3. Fix LRU order bug - reverse traversal to maintain LRU order after copy
+4. Add reset method for unit test clean state
+5. Fix inverted index loading format mismatch - only 1 term was loaded due to wrong expectation of empty line separators
+6. Change server bind address from 192.168.81.168 to 0.0.0.0 for easier testing
+7. Update benchmark.py and test_concurrent.py default host to localhost
+8. Add complete unit tests: edit_distance, double_lru
+9. Add test scripts: benchmark.py, test_concurrent.py, test_basic.sh
+10. Add test reports: 测试报告.md, 问题单与修复记录.md
+11. Add TECHNICAL_SUMMARY.md - full technical summary covering architecture, algorithms, C++ features, interview questions
+
+Co-authored-by: Claude Opus 4.6 <noreply@anthropic.com>
