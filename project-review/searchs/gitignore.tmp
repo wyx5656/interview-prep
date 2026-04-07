@@ -1,0 +1,14 @@
+# 编译产物
+v5/bin/*.o
+v5/bin/online
+v5/bin/offline
+v5/bin/test_edit_distance
+v5/bin/test_double_lru
+v5/server.exe
+v5/server.log
+v5/nohup.out
+
+# 数据文件（太大，不需要推送到git）
+v5/data/*.dat
+v5/yuliao/*.zip
+v5/yuliao/*.rar
