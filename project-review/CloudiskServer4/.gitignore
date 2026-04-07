@@ -1,0 +1,21 @@
+# Compiled object files
+*.o
+
+# Executable
+server/CloudiskServer
+
+# Logs
+*.log
+log.txt
+connection.log
+task.log
+
+# Emacs/Vim
+*~
+*.swp
+*.swo
+.\#*
+\#*\#
+
+# Temporary
+*.tmp
