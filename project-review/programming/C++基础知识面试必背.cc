@@ -57,7 +57,7 @@ int* const p2 = const_cast_cast<int*>(&MAX_VALUE);
 // 口诀：左数右指 → const在*左边是*（数=内容）const，const在*右边是指针本身const
 
 // 3. const 修饰指针的引用
-// int* const& ref = p;  // 引用本身已经不能改，const就是修饰指针本身
+//int* const& ref = p;  // 引用本身已经不能改，const就是修饰指针本身
 
 // 4. const 修饰函数参数
 void func(const std::string& s) {
@@ -71,7 +71,7 @@ class Example {
 public:
     // const 成员函数：承诺不会修改类的任何成员变量（除了mutable）
     int get_x() const {  // 成员函数后面加const
-        // x = 10;  // 错误！const成员函数不能修改成员变量
+        //x = 10;  // 错误！const成员函数不能修改成员变量
         return x;
     }
     void set_x(int val) {
@@ -86,7 +86,7 @@ const std::string get_name() {
 
 // 7. const 修饰类对象
 const Example obj;
-// obj.set_x(10);  // 错误！const对象只能调用const成员函数，不能调用非const成员函数
+//obj.set_x(10);  // 错误！const对象只能调用const成员函数，不能调用非const成员函数
 
 } // namespace const_examples
 
@@ -1475,6 +1475,480 @@ public:
     }
     // 现在 C++11 后就是要这么写，五法则
 };
+
+// ============================================================================
+// 补充高频基础知识点
+// ============================================================================
+
+// ============================================================================
+// 1. explicit 关键字
+// ============================================================================
+
+/*
+explicit 用来修饰**单参数构造函数**，禁止**隐式类型转换**。
+
+为什么需要？防止编译器偷偷帮你做类型转换，得到你不想要的结果。
+*/
+
+namespace explicit_example {
+
+// ❌ 没有explicit，编译器可以隐式转换
+class MyString {
+public:
+    MyString(int len) {  // 可以接受int，隐式转换int → MyString
+        // 分配长度len的字符串
+    }
+};
+
+void func(MyString s) {
+    // 接受MyString
+}
+
+void example() {
+    // 你以为会编译错？其实编译器偷偷把 10 隐式转换成 MyString(10) → 编译通过，但这不是你想要的
+    func(10);  // ❌ 隐式转换，能过编译，但不对
+}
+
+// ✅ 加上explicit，禁止隐式转换
+class MyStringExplicit {
+public:
+    explicit MyStringExplicit(int len) {}
+};
+
+void func_explicit(MyStringExplicit s) {}
+
+void example_explicit() {
+    // func_explicit(10);  // ✅ 编译错误！提前阻止错误，你必须显式写 MyStringExplicit(10)
+    func_explicit(MyStringExplicit(10));  // ✓ 正确，显式构造
+}
+
+// 总结：单参数构造函数都建议加explicit，除非你就是想要隐式转换（比如转换运算符）
+} // namespace explicit_example
+
+// ============================================================================
+// 2. mutable 关键字
+// ============================================================================
+
+/*
+mutable 关键字：**即使在const成员函数中，也能修改mutable修饰的成员变量**。
+
+用途：
+- 缓存：const成员函数要修改缓存，没问题
+- 互斥锁：const成员函数要加锁修改锁状态，没问题
+- 调试计数：const函数里计数，mutable允许修改
+*/
+
+namespace mutable_example {
+
+class Cache {
+private:
+    mutable int cache_hits_ = 0;  // mutable，const成员也能改
+    std::string data_;
+public:
+    std::string get_data() const {  // const成员函数，承诺不修改成员
+        cache_hits_++;  // ✓ mutable，就算const成员函数也能改
+        return data_;
+    }
+    int get_hits() const {
+        return cache_hits_;
+    }
+};
+
+// 结论：mutable 打破const的只读限制，给需要在const函数修改的特殊成员用
+} // namespace mutable_example
+
+// ============================================================================
+// 3. volatile 关键字
+// ============================================================================
+
+/*
+volatile 告诉编译器：**这个变量可能被其他线程/硬件改变，不要做优化**，每次读写都必须真的去内存读，不能缓存到寄存器。
+
+用途：
+1. 共享变量，会被其他线程修改（但现在一般用atomic，volatile不够）
+2. 硬件寄存器，映射到内存，每次读写硬件，必须真读写，不能优化
+
+例子：
+*/
+
+volatile bool flag = false;
+
+// 线程1：
+void set_flag() {
+    flag = true;  // 写入
+}
+
+// 线程2：
+void wait_flag() {
+    while (!flag) {  // 没有volatile，编译器会优化成 if(!flag) while(1); 永远循环，因为它认为flag不会变
+        // 等待
+    }
+}
+
+/*
+总结：现在并发编程一般用 std::atomic，比volatile更安全正确。volatile主要用在底层硬件编程，保证不被编译器优化。
+*/
+
+// ============================================================================
+// 4. sizeof 常见面试题
+// ============================================================================
+
+/*
+常见问题：
+*/
+
+namespace sizeof_example {
+
+// Q: 空类 sizeof 是多少？ → 1字节！不是0！
+class EmptyClass {};
+// 为什么？每个对象必须有独一无二的地址，所以至少分配1字节，所以sizeof是1
+
+// Q: 有虚函数的类 sizeof 是多少？ → 必须多8字节（64位）存虚指针vptr
+class VirtualClass {
+    virtual void func() {}
+};
+// sizeof(VirtualClass) = 8 (64位)，只有虚指针，没其他成员
+
+// Q: 继承空类，派生类sizeof多少？ → 还是1，派生类加自己成员，空基类不占空间（编译器优化空基类优化）
+class Derived : public EmptyClass {
+    int x;
+};
+// sizeof(Derived) = 4（64位下还是4，因为空基类优化，基类那1字节优化掉了）
+
+// Q: 64位系统下，指针sizeof多少？ → 所有指针都是8字节！不管指向int还是函数还是什么，都是8字节，引用也是8字节（底层就是指针）
+// Q: 32位就是4字节
+
+// 总结：
+// - 空类 → 1字节
+// - 有虚函数 → 多加sizeof(vptr) = 8字节（64位）
+// - 所有指针，不管什么类型，都是8字节（64位）
+} // namespace sizeof_example
+
+// ============================================================================
+// 5. 多继承 & 菱形继承 & 虚继承
+// ============================================================================
+
+/*
+### 多继承：一个派生类可以有多个直接基类
+
+### 菱形继承问题：
+```
+    A
+   / \
+  B   C
+   \ /
+    D
+```
+- B和C都继承A，D继承B和C → D里面有两份A的成员 → **二义性**，访问A成员不知道哪一份
+- 地址也浪费，两份相同成员没必要
+
+### 解决：虚继承 → 让最派生类只保存一份共同基类
+*/
+
+namespace virtual_inheritance {
+
+class A {
+public:
+    int a;
+};
+
+// B虚继承A，C虚继承A → 只保存一份A
+class B : virtual public A {};
+class C : virtual public public A {};
+
+class D : public B, public C {
+    // 现在D里只有一份A，不会二义性了
+};
+
+/*
+原理：虚继承会添加一个虚指针，指向共享基类的偏移，这样就能找到共享的那一份，不会有两份。
+结论：菱形继承必须用虚继承解决二义性和空间浪费。
+*/
+
+} // namespace virtual_inheritance
+
+// ============================================================================
+// 6. 拷贝构造函数 什么时候会被调用？
+// ============================================================================
+
+/*
+四种情况会调用拷贝构造：
+1. 用一个对象初始化另一个对象：`T a = b;` where b is T
+2. 函数参数按值传递：`void func(T a);` 调用func(b)，b拷贝给a
+3. 函数返回值按值返回：`T func() { T obj; return obj; }` 返回局部对象，会拷贝（RVO优化可能优化掉）
+4. 插入容器元素：`vector.push_back(obj);` obj拷贝进去
+
+记住：只要需要产生一个**新副本**，就会调用拷贝构造。
+*/
+
+// ============================================================================
+// 7. friend 友元
+// ============================================================================
+
+/*
+friend 就是"好朋友"，友元函数/友元类可以访问这个类的private成员。
+
+用途：
+- 运算符重载，比如 `ostream& operator<<(ostream& os, const MyClass& obj)` 需要访问私有成员，所以声明为friend
+- 测试：测试类可以访问被测类私有成员，方便测试
+
+优缺点：
+- 优点：方便，需要访问私有又不想给所有人开放，给特定朋友开放
+- 缺点：破坏了封装，friend能访问私有，所以要谨慎用
+
+例子：
+*/
+
+namespace friend_example {
+
+class Box {
+private:
+    int width_;
+public:
+    Box(int w) : width_(w) {}
+    // 声明友元函数，可以访问私有width_
+    friend int compare(const Box& a, const Box& b);
+};
+
+int compare(const Box& a, const Box& b) {
+    return a.width_ - b.width_;  // ✓ 友元可以访问私有成员
+}
+
+} // namespace friend_example
+
+// ============================================================================
+// 8. nullptr  vs NULL
+// ============================================================================
+
+/*
+- NULL 就是宏，本质是 `#define NULL ((void*)0)`，是整数0，不是真正的指针
+- nullptr 是C++11引入的，类型是 `std::nullptr_t`，真正代表空指针
+
+优点：
+- 类型安全：不会和整数混淆，函数重载能正确区分
+- 例子：
+*/
+
+namespace nullptr_example {
+
+void func(int) {
+    // 处理int
+}
+void func(void*) {
+    // 处理指针
+}
+
+void example() {
+    func(NULL);  // ❌ NULL是0 整数，会调用func(int)，不是你想要的func(void*)
+    func(nullptr);  // ✓ nullptr是指针类型，正确调用func(void*)
+}
+
+// 结论：C++11以后，请用nullptr代替NULL，类型安全
+} // namespace nullptr_example
+
+// ============================================================================
+// 9. =default =delete 用法
+// ============================================================================
+
+/*
+C++11 引入，非常有用：
+
+- `=default`：要求编译器生成默认版本。
+  - 你写了自定义构造函数，编译器就不生成默认构造了，如果你还要默认构造，加 `A() = default;`
+  - 保持语法干净，不用空实现，编译器生成更优化
+
+- `=delete`：禁止你不想要的函数。
+  - 禁止拷贝：`A(const A&) = delete;` 禁止拷贝构造
+  - 禁止参数匹配到错误类型：比如禁止double转int，你可以声明 `void func(double) = delete;`
+
+例子：
+*/
+
+namespace default_delete_example {
+
+// 单例，禁止拷贝赋值
+class Singleton {
+public:
+    Singleton() = default;  // 默认构造，=default
+    Singleton(const Singleton&) = delete;  // 禁止拷贝
+    Singleton& operator=(const Singleton&) = delete;  // 禁止赋值
+};
+
+} // namespace default_delete_example
+
+// ============================================================================
+// 10. override final 关键字
+// ============================================================================
+
+/*
+- `override`: 标记派生类重写基类的虚函数
+  - 好处：编译器检查，如果签名不对（比如参数不对），编译报错，提前发现错误
+  - 你写错函数签名，没override编译器不会报错，就是没重写成功，找bug很难
+  - C++11以后，重写虚函数都建议加override，好习惯
+
+- `final`:
+  - 修饰类：final class A { ... }; → 这个类不能被继承了
+  - 修饰虚函数：virtual void func() final; → 派生类不能重写这个函数了
+
+例子：
+*/
+
+namespace override_final_example {
+
+class Base {
+public:
+    virtual void func(int x);
+    virtual void func2() final;  // 派生类不能重写func2
+};
+
+class Derived final : public Base {  // Derived 不能再被继承
+public:
+    void func(int x) override {  // ✅ 明确标记重写，编译器检查
+        // ...
+    }
+};
+
+} // namespace override_final_example
+
+// ============================================================================
+// 11. constexpr 关键字
+// ============================================================================
+
+/*
+constexpr 告诉编译器：**这个函数/变量可以在**编译期**算出结果**，所以可以在编译期求值，运行不用算。
+
+用途：
+- constexpr 变量 → 编译期常量，比const更强大
+- constexpr 函数 → 可以在编译期计算结果，提升运行时性能
+- constexpr 构造函数 → 可以在编译期构造对象，constexpr 变量就能用这个类
+*/
+
+namespace constexpr_example {
+
+constexpr int factorial(int n) {  // 编译期可以计算阶乘
+    return n <= 1 ? 1 : n * factorial(n - 1);
+}
+
+// 编译期算出结果，运行直接用
+constexpr int fact5 = factorial(5);  // 编译期算出 120，运行直接是常量
+
+// 对比：constexpr 是编译期确定，const 只是说不能改，可以运行期确定
+// constexpr 一定是const，const 不一定是constexpr
+
+// C++11以后，能constexpr就constexpr，提升性能
+} // namespace constexpr_example
+
+// ============================================================================
+// 12. shared_ptr 引用计数线程安全吗？
+// ============================================================================
+
+/*
+结论：
+- ✓ **引用计数的修改是线程安全的**：shared_ptr 引用计数用原子操作增减，所以计数肯定对，不会计数错了导致double free或者漏释放
+- ✗ **对象本身的访问不是线程安全**：你改对象里面的数据，还是要自己加锁
+- ✗ **拷贝shared_ptr**：拷贝要修改引用计数，这个修改是线程安全的
+
+例子：
+- 多个线程同时拷贝/销毁同一个shared_ptr → 计数修改原子，安全
+- 多个线程同时改shared_ptr指向的对象 → 对象本身没保护，不安全，要自己加锁
+
+总结：计数安全，对象不安全，记住这个就行。
+*/
+
+// ============================================================================
+// 13. enable_shared_from_this 是什么？解决什么问题？
+// ============================================================================
+
+/*
+问题场景：你对象被shared_ptr管理，你现在需要**在成员函数里拿到this的shared_ptr**，怎么办？
+
+你直接 `return shared_ptr<T>(this)` → 会新建一个控制块，引用计数变成两份，最后double free，错了。
+
+解决：让你的类继承 `std::enable_shared_from_this<T>`，然后调用 `shared_from_this()` 方法，它会从现有控制块拿指针，增加计数，不会新建控制块，正确。
+
+例子：
+*/
+
+#include <memory>
+
+class Node : public std::enable_shared_from_this<Node> {
+public:
+    std::shared_ptr<Node> get_shared() {
+        return shared_from_this();  // ✓ 正确拿到this的shared_ptr
+    }
+};
+
+/*
+总结：当对象已经被shared_ptr管理，又需要在内部获取this的shared_ptr，就继承enable_shared_from_this，用shared_from_this()。
+*/
+
+// ============================================================================
+// 14. auto 推导规则
+// ============================================================================
+
+/*
+auto 自动推导类型，C++11引入，简化代码，避免写很长类型。
+
+基本规则：
+- 表达式推表达式类型，`auto x = expr;` x类型就是expr类型
+- 如果要推导引用，要写 `auto& ref = expr;`
+- 如果要不可变，`const auto x = expr;`
+- 万能引用：`template<typename T> void func(T&& t);` → T&& 不是右值引用，是万能引用，能接受左值也能接受右值，推导后会保留值类别，给完美转发用
+
+好处：避免你写错类型，简化代码，lambda必须用auto。
+*/
+
+// ============================================================================
+// 15. 拷贝交换 idiom (copy-and-swap)
+// ============================================================================
+
+/*
+怎么实现拷贝赋值运算符，能处理自赋值，异常安全？
+
+最佳实践就是拷贝交换：
+1. 按值传参，自动拷贝
+2. 交换指针，swap
+3. 函数结束，旧对象析构释放
+
+好处：
+- 自动处理自赋值（拷贝已经做了，swap交换，没问题）
+- 异常安全：如果拷贝抛出异常，*this还没改，回滚容易
+
+代码示例：
+*/
+
+namespace copy_swap {
+
+template<typename T>
+class MyPtr {
+    T* data_;
+public:
+    MyPtr(T* data) : data_(data) {}
+    ~MyPtr() { delete data_; }
+
+    // 拷贝赋值 拷贝交换
+    MyPtr& operator=(MyPtr other) {  // 🔥 按值传参，自动拷贝
+        swap(data_, other.data_);  // 交换指针
+        return *this;
+    }  // 函数结束，other析构，释放原来的data_，完美
+};
+
+} // namespace copy_swap
+
+// ============================================================================
+// 16. namespace 名字空间
+// ============================================================================
+
+/*
+名字空间用来解决**名字冲突**，不同库的相同名字不会冲突。
+
+- `namespace ns { ... }` 定义名字空间
+- `using namespace ns;` 引入整个名字空间到当前作用域
+- `using ns::func;` 只引入特定名字
+- 匿名命名空间 `namespace { ... }` → 里面的东西只在当前cpp文件可见，相当于static全局变量，不会链接冲突
+
+现在项目一般都放在自己名字空间，避免和其他库冲突。
+*/
 
 // ============================================================================
 // END
